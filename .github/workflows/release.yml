@@ -13,18 +13,14 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
-        with:
-          path: nrf54lm20-uf2-bootloader
 
       - uses: zephyrproject-rtos/action-zephyr-setup@v1
         with:
-          app-path: nrf54lm20-uf2-bootloader/bootloader
+          app-path: bootloader
           toolchains: arm-zephyr-eabi
 
       - name: Build
-        working-directory: ${{ github.workspace }}
-        run: |
-          west build -b nrf54lm20dk/nrf54lm20a/cpuapp nrf54lm20-uf2-bootloader/bootloader
+        run: west build -b nrf54lm20dk/nrf54lm20a/cpuapp bootloader
 
       - name: Stage release assets
         run: |
