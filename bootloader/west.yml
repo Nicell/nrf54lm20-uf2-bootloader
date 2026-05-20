@@ -1,0 +1,27 @@
+# Only the modules an nRF54LM20 BL with USB MSC actually needs.
+# name-allowlist is more conservative than blocklist — new upstream
+# modules can't silently leak in.
+#
+#   cmsis_6      — Cortex-M33 (nRF54L)
+#   hal_nordic   — Nordic Semi HAL (nrfx + soc support)
+#   picolibc     — Zephyr's default libc
+#   segger       — RTT (still referenced even when console uses UART)
+#
+# Add more (zcbor, mbedtls, …) here if a build error surfaces them.
+
+manifest:
+  remotes:
+    - name: upstream
+      url-base: https://github.com/zephyrproject-rtos
+  projects:
+    - name: zephyr
+      remote: upstream
+      revision: v4.4.0
+      import:
+        name-allowlist:
+          - cmsis_6
+          - hal_nordic
+          - picolibc
+          - segger
+  self:
+    path: bootloader

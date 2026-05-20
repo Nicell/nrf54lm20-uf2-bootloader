@@ -1,0 +1,21 @@
+# West workspace state — initialized by `west init`, populated by
+# `west update`. None of this is tracked here; the manifest in
+# bootloader/west.yml is the source of truth.
+.west/
+.venv/
+zephyr/
+modules/
+build*/
+
+# Build artefacts
+*.o
+*.elf
+*.bin
+*.uf2
+*.hex
+*.map
+
+# OS / tooling
+.DS_Store
+__pycache__/
+*.py[co]

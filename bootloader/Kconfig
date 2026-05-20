@@ -1,0 +1,79 @@
+# SPDX-License-Identifier: Apache-2.0
+
+mainmenu "UF2 Bootloader"
+
+source "Kconfig.zephyr"
+
+menu "UF2 Bootloader options"
+
+config UF2_USBD_VID
+    hex "USB Vendor ID"
+    default 0x239a
+    help
+      Default 0x239A is Adafruit's VID; replace with your own assigned
+      VID before shipping. Most hosts only key off VID/PID for driver
+      matching, so this only matters for OS-level driver association.
+
+config UF2_USBD_PID
+    hex "USB Product ID"
+    default 0x4000
+
+config UF2_USBD_MANUFACTURER
+    string "USB manufacturer string"
+    default "ZMK"
+
+config UF2_USBD_PRODUCT
+    string "USB product string"
+    default "ZMK UF2 Bootloader"
+
+config UF2_DBL_TAP_DELAY_MS
+    int "Double-tap detection window (ms)"
+    default 500
+    range 100 5000
+    help
+      How long to hold the double-tap magic in noinit RAM on a normal
+      cold boot. A second reset within this window leaves the magic set
+      and the next boot enters DFU. Smaller values reduce the perceptible
+      "boot delay" on every reset but make the window harder for a human
+      to hit; larger values are friendlier but delay every app boot.
+
+
+config UF2_BOARD_ID
+    string "Board ID string for INFO_UF2.TXT"
+    default "ZMK-nRF54LM20-v0"
+
+config UF2_PRODUCT_NAME
+    string "Product name for INFO_UF2.TXT"
+    default "ZMK nRF54LM20 Bootloader"
+
+config UF2_VOLUME_LABEL
+    string "FAT volume label (11 chars, padded)"
+    default "54LM20BOOT "
+
+config UF2_INDEX_URL
+    string "URL placed in INDEX.HTM"
+    default "https://zmk.dev/"
+
+config UF2_FAMILY_ID
+    hex "UF2 family ID for this board"
+    default 0x4ED75C3F
+    help
+      Unique 32-bit family ID for this board. Used by the host-side UF2
+      tooling to refuse images built for a different chip family. Should
+      eventually be registered at https://github.com/microsoft/uf2.
+
+config UF2_FLASH_SIZE
+    int "Bytes of application flash the host sees in CURRENT.UF2"
+    default 1884160
+    help
+      Size of the application partition exposed to the host as CURRENT.UF2.
+      Default matches slot0_partition size on nrf54lm20 (1840 KiB).
+
+config UF2_NUM_BLOCKS
+    int "Number of 512-byte sectors in the synthesized FAT16 volume"
+    default 65801
+    help
+      Must result in a FAT16 cluster count >= 0x1015 and < 0xFFD5. The
+      default (0x10109) yields a 32 MiB virtual disk, matching tinyuf2.
+
+endmenu

@@ -1,0 +1,39 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: nrf54lm20-uf2-bootloader
+
+      - uses: zephyrproject-rtos/action-zephyr-setup@v1
+        with:
+          app-path: nrf54lm20-uf2-bootloader/bootloader
+          toolchains: arm-zephyr-eabi
+
+      - name: Build
+        working-directory: ${{ github.workspace }}
+        run: |
+          west build -b nrf54lm20dk/nrf54lm20a/cpuapp nrf54lm20-uf2-bootloader/bootloader
+
+      - name: Stage release assets
+        run: |
+          mkdir -p out
+          cp build/zephyr/zephyr.uf2 "out/nrf54lm20dk-uf2-bootloader-${{ github.ref_name }}.uf2"
+          cp build/zephyr/zephyr.hex "out/nrf54lm20dk-uf2-bootloader-${{ github.ref_name }}.hex"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: out/*
+          generate_release_notes: true

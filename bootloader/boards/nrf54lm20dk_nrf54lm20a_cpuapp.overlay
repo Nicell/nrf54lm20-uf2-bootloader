@@ -1,0 +1,44 @@
+/*
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Bootloader gets 96 KiB at 0x0, the application slot starts at 0x18000.
+ * storage_partition is preserved at the tail so the application can
+ * still use settings storage.
+ */
+
+&cpuapp_rram {
+    partitions {
+        /delete-node/ partition@0;
+        /delete-node/ partition@10000;
+        /delete-node/ partition@102000;
+        /delete-node/ partition@1f4000;
+
+        compatible = "fixed-partitions";
+
+        boot_partition: partition@0 {
+            label = "bootloader";
+            reg = <0x0 DT_SIZE_K(96)>;
+        };
+
+        slot0_partition: partition@18000 {
+            label = "image-0";
+            reg = <0x18000 DT_SIZE_K(1840)>;
+        };
+
+        storage_partition: partition@1e4000 {
+            label = "storage";
+            reg = <0x1e4000 DT_SIZE_K(100)>;
+        };
+    };
+};
+
+/ {
+    chosen {
+        zephyr,code-partition = &boot_partition;
+    };
+
+    /* Hold this button during reset to force DFU mode. */
+    aliases {
+        dfu-button = &button0;
+    };
+};
