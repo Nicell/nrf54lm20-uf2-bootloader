@@ -8,15 +8,16 @@ menu "UF2 Bootloader options"
 
 config UF2_USBD_VID
     hex "USB Vendor ID"
-    default 0x239a
+    default 0x1915
     help
-      Default 0x239A is Adafruit's VID; replace with your own assigned
-      VID before shipping. Most hosts only key off VID/PID for driver
-      matching, so this only matters for OS-level driver association.
+      Default 0x1915 is Nordic Semiconductor's VID, which Nordic permits
+      for development on their parts. The PID below is a placeholder; both
+      should be replaced with an assigned VID/PID before shipping. Most
+      hosts only key off VID/PID for driver matching.
 
 config UF2_USBD_PID
     hex "USB Product ID"
-    default 0x4000
+    default 0x3e85
 
 config UF2_USBD_MANUFACTURER
     string "USB manufacturer string"

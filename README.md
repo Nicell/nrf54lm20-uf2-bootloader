@@ -80,6 +80,14 @@ On a custom board, bind the alias to a PWM LED node:
 };
 ```
 
+## USB VID/PID
+
+The device enumerates under Nordic's VID (`0x1915`), which Nordic
+[permits for development](https://devzone.nordicsemi.com/f/nordic-q-a/83664/custom-usb-device-descriptor-with-nordic-semiconductor-s-vendor-id),
+with a placeholder PID. Both are subject to change — replace them with an
+assigned VID/PID before shipping (`UF2_USBD_VID` / `UF2_USBD_PID` in
+`bootloader/Kconfig`).
+
 ## Credits
 
 The UF2 / ghost-FAT engine (`src/ghostfat.c`, `src/uf2.h`, `src/compile_date.h`)
