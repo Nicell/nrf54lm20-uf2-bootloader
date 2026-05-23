@@ -1,4 +1,6 @@
 /*
+ * SPDX-License-Identifier: MIT
+ *
  * UF2 block format and ghost-FAT API.
  * Ported from tinyuf2 (MIT, Microsoft + Adafruit + Henry Gabryjelski).
  */

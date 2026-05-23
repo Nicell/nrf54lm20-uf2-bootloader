@@ -1,5 +1,5 @@
 /*
- * SPDX-License-Identifier: Apache-2.0
+ * SPDX-License-Identifier: MIT
  *
  * Bootloader gets 96 KiB at 0x0, the application slot starts at 0x18000.
  * storage_partition is preserved at the tail so the application can

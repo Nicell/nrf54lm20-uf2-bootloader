@@ -56,6 +56,17 @@ states:
 - **WRITING** — hard fast blink, UF2 block in flight
 - **FINISHED** — solid on, transfer complete
 
+## Credits
+
+The UF2 / ghost-FAT engine (`src/ghostfat.c`, `src/uf2.h`, `src/compile_date.h`)
+is ported from [tinyuf2](https://github.com/adafruit/tinyuf2) — itself descended
+from Microsoft's [uf2-samdx1](https://github.com/microsoft/uf2-samdx1) and
+Adafruit's work, with the on-the-fly FAT16 synthesis by Henry Gabryjelski. The
+double-tap magic values (`0xf01669ef` / `0xf02669ef`) match those used by tinyuf2
+and the
+[Adafruit nRF52 bootloader](https://github.com/adafruit/Adafruit_nRF52_Bootloader),
+so an application's "reboot into bootloader" path works here unchanged.
+
 ## License
 
-Apache-2.0.
+MIT. See [LICENSE](LICENSE).

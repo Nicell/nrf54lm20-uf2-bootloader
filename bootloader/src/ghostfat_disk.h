@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: Apache-2.0 */
+/* SPDX-License-Identifier: MIT */
 
 #ifndef UF2_GHOSTFAT_DISK_H
 #define UF2_GHOSTFAT_DISK_H

@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: Apache-2.0 */
+/* SPDX-License-Identifier: MIT */
 
 #ifndef UF2_INDICATOR_H
 #define UF2_INDICATOR_H

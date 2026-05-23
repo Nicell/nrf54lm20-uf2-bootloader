@@ -1,4 +1,6 @@
 /*
+ * SPDX-License-Identifier: MIT
+ *
  * Compile-time date macros, used by ghostfat to stamp directory entries.
  * Verbatim from tinyuf2 (MIT, Henry Gabryjelski + Adafruit).
  */

@@ -1,4 +1,6 @@
 /*
+ * SPDX-License-Identifier: MIT
+ *
  * Ghost-FAT — synthesizes a FAT16 volume on the fly and exposes the
  * application flash region as a single CURRENT.UF2 file. Writes to
  * CURRENT.UF2 (i.e. UF2 blocks dropped onto the volume by the host) are

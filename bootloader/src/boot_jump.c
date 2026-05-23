@@ -1,5 +1,5 @@
 /*
- * SPDX-License-Identifier: Apache-2.0
+ * SPDX-License-Identifier: MIT
  *
  * Cortex-M chain-load to the application via SCB->VTOR + MSP swap.
  * Reset vector format:

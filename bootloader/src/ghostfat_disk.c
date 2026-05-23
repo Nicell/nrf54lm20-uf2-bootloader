@@ -1,5 +1,5 @@
 /*
- * SPDX-License-Identifier: Apache-2.0
+ * SPDX-License-Identifier: MIT
  *
  * Wraps the ghost-FAT block engine in a Zephyr struct disk_info so
  * the USB MSC class can serve it.

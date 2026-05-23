@@ -1,5 +1,5 @@
 /*
- * SPDX-License-Identifier: Apache-2.0
+ * SPDX-License-Identifier: MIT
  *
  * Flash backend for the ghost-FAT UF2 engine. nRF54LM20 has RRAM, so
  * writes do not need a pre-erase. The host may rewrite the same UF2
