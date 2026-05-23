@@ -1,11 +1,13 @@
 # nRF54LM20 UF2 Bootloader
 
-A small UF2 bootloader for the
-[nRF54LM20 DK](https://www.nordicsemi.com/Products/Development-hardware/nRF54LM20-DK).
-On reset, holding the user button (or double-tapping reset) drops the
-device into DFU mode: it enumerates as a USB mass-storage volume that
-accepts a `.uf2` drag-and-drop. The application is flashed in place
-and chain-loaded; no extra reboot.
+A small UF2 bootloader for the nRF54LM20A/B SoC. On reset, holding the user
+button (or double-tapping reset) drops the device into DFU mode: it
+enumerates as a USB mass-storage volume that accepts a `.uf2`
+drag-and-drop. The application is flashed in place and chain-loaded; no
+extra reboot.
+
+> [!NOTE]
+> [nRF54LM20 DK](https://www.nordicsemi.com/Products/Development-hardware/nRF54LM20-DK) is the only board supported and tested for now.
 
 ## Quick start
 
