@@ -10,7 +10,7 @@ and chain-loaded; no extra reboot.
 ## Quick start
 
 ```sh
-git clone https://github.com/<you>/nrf54lm20-uf2-bootloader.git
+git clone https://github.com/carrefinho/nrf54lm20-uf2-bootloader.git
 cd nrf54lm20-uf2-bootloader
 python3 -m venv .venv
 source .venv/bin/activate
@@ -46,6 +46,20 @@ nrf54lm20-uf2-bootloader/
 
 The application must be linked with `zephyr,code-partition = &slot0_partition;`.
 
+## DFU button
+
+DFU is entered on a double-tap of reset, when slot0 is empty, or — if a
+`dfu-button` alias is present — while that button is held at boot. The DK
+overlay binds it to `button0`:
+
+```dts
+/ {
+    aliases {
+        dfu-button = &button0;
+    };
+};
+```
+
 ## Indicator LED
 
 The `pwm-led0` DT alias (present on the LM20 DK) is driven through four
@@ -55,6 +69,16 @@ states:
 - **PLUGGED** — fast breathe, host enumerated
 - **WRITING** — hard fast blink, UF2 block in flight
 - **FINISHED** — solid on, transfer complete
+
+On a custom board, bind the alias to a PWM LED node:
+
+```dts
+/ {
+    aliases {
+        pwm-led0 = &pwm_led0;
+    };
+};
+```
 
 ## Credits
 
