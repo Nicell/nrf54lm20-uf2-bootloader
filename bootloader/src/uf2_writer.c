@@ -60,7 +60,7 @@ static bool begin(uint32_t num_blocks)
 		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 	};
 
-	uf2_disk_cancel_eject();
+	uf2_disk_cancel_reboot();
 	memset(&st, 0, sizeof(st));
 	st.active = true;
 	st.num_blocks = num_blocks;
@@ -107,8 +107,8 @@ static void commit(void)
 		total_us ? (uint32_t)((uint64_t)st.bytes_written * 1000U / total_us) : 0U,
 		flash_us / 1000U);
 	uf2_status_set_state(UF2_STATE_DONE);
-	/* Let the host finish flushing and unmount before we vanish. */
-	uf2_disk_request_eject();
+	/* Let the host finish its trailing writes before we vanish. */
+	uf2_disk_request_reboot();
 }
 
 void uf2_writer_sector(const UF2_Block *bl)

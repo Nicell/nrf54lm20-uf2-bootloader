@@ -19,9 +19,6 @@ jobs:
           app-path: bootloader
           toolchains: arm-zephyr-eabi
 
-      - name: Apply Zephyr patches
-        run: west patch -sm bootloader apply
-
       - name: Build and stage release assets
         run: |
           mkdir -p out

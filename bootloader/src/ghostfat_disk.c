@@ -27,83 +27,57 @@ static int gf_init(struct disk_info *disk)
 }
 
 /*
- * Soft eject. After the image is committed the host is usually still
- * flushing FAT/directory updates. Yanking USB then makes macOS say "Disk
- * Not Ejected Properly" and Windows pop write-error dialogs. Instead:
+ * Reboot only once the host has finished. The last UF2 block arrives
+ * before the host has written the file's directory entry and FAT, and
+ * before it has even received the status for that last WRITE. Vanishing
+ * then makes Windows report the copy as failed (0x800701B1, "device does
+ * not exist"); see microsoft/uf2-samdx1#11 and adafruit/tinyuf2#375.
  *
- *   QUIET   keep serving the disk until the host has been idle for
- *           UF2_EJECT_QUIET_MS (every read/write restarts the timer)
- *   NOMEDIA report "medium not present"; the host sees it on its next
- *           TEST UNIT READY poll and unmounts, as for a pulled SD card.
- *           Needs CONFIG_USBD_MSC_MEDIUM_LOCK=n (zephyr/patches): if the
- *           host may lock the medium, macOS stops polling after mount.
- *   reboot  UF2_EJECT_ACK_MS after the host first sees NOMEDIA, or at
- *           UF2_EJECT_TIMEOUT_MS after commit if it never polls
+ * So after commit, keep serving the disk and reboot once the host has
+ * issued no reads or writes for UF2_REBOOT_IDLE_MS (each one restarts
+ * the timer), or UF2_REBOOT_MAX_MS after commit if it never goes idle.
+ *
+ * macOS still shows "Disk Not Ejected Properly": it warns on any unmount
+ * the user did not request, and no device-side signal avoids that.
  */
-enum eject_state { EJECT_IDLE, EJECT_QUIET, EJECT_NOMEDIA, EJECT_ACKED };
-
-static atomic_t eject_state = ATOMIC_INIT(EJECT_IDLE);
-static int64_t eject_t0;
+static atomic_t reboot_pending;
+static int64_t commit_ms;
 
 static void reboot_handler(struct k_work *work)
 {
     ARG_UNUSED(work);
-    LOG_INF("eject: rebooting (%s, %lld ms after commit)",
-            atomic_get(&eject_state) == EJECT_ACKED ? "host acked" : "timeout",
-            k_uptime_get() - eject_t0);
+    LOG_INF("rebooting %lld ms after commit", k_uptime_get() - commit_ms);
     sys_reboot(SYS_REBOOT_WARM);
 }
-static K_WORK_DELAYABLE_DEFINE(reboot_work, reboot_handler);
-
-static void quiet_handler(struct k_work *work)
-{
-    ARG_UNUSED(work);
-    if (atomic_cas(&eject_state, EJECT_QUIET, EJECT_NOMEDIA)) {
-        LOG_INF("eject: host idle, reporting no media (+%lld ms)", k_uptime_get() - eject_t0);
-    }
-}
-static K_WORK_DELAYABLE_DEFINE(quiet_work, quiet_handler);
+static K_WORK_DELAYABLE_DEFINE(idle_work, reboot_handler);
+static K_WORK_DELAYABLE_DEFINE(max_work, reboot_handler);
 
 static void host_activity(void)
 {
-    if (atomic_get(&eject_state) == EJECT_QUIET) {
-        LOG_DBG("eject: host I/O while quiet (+%lld ms)", k_uptime_get() - eject_t0);
-        k_work_reschedule(&quiet_work, K_MSEC(CONFIG_UF2_EJECT_QUIET_MS));
+    if (atomic_get(&reboot_pending)) {
+        k_work_reschedule(&idle_work, K_MSEC(CONFIG_UF2_REBOOT_IDLE_MS));
     }
 }
 
-void uf2_disk_request_eject(void)
+void uf2_disk_request_reboot(void)
 {
-    eject_t0 = k_uptime_get();
-    atomic_set(&eject_state, EJECT_QUIET);
-    k_work_reschedule(&quiet_work, K_MSEC(CONFIG_UF2_EJECT_QUIET_MS));
-    k_work_reschedule(&reboot_work, K_MSEC(CONFIG_UF2_EJECT_TIMEOUT_MS));
+    commit_ms = k_uptime_get();
+    atomic_set(&reboot_pending, 1);
+    k_work_reschedule(&idle_work, K_MSEC(CONFIG_UF2_REBOOT_IDLE_MS));
+    k_work_reschedule(&max_work, K_MSEC(CONFIG_UF2_REBOOT_MAX_MS));
 }
 
-void uf2_disk_cancel_eject(void)
+void uf2_disk_cancel_reboot(void)
 {
-    atomic_set(&eject_state, EJECT_IDLE);
-    (void)k_work_cancel_delayable(&quiet_work);
-    (void)k_work_cancel_delayable(&reboot_work);
+    atomic_set(&reboot_pending, 0);
+    (void)k_work_cancel_delayable(&idle_work);
+    (void)k_work_cancel_delayable(&max_work);
 }
 
 static int gf_status(struct disk_info *disk)
 {
     ARG_UNUSED(disk);
-
-    switch (atomic_get(&eject_state)) {
-    case EJECT_NOMEDIA:
-        if (atomic_cas(&eject_state, EJECT_NOMEDIA, EJECT_ACKED)) {
-            LOG_INF("eject: host saw no media (+%lld ms)", k_uptime_get() - eject_t0);
-            k_work_reschedule(&reboot_work, K_MSEC(CONFIG_UF2_EJECT_ACK_MS));
-        }
-        return DISK_STATUS_NOMEDIA;
-    case EJECT_ACKED:
-        LOG_DBG("eject: status poll (+%lld ms)", k_uptime_get() - eject_t0);
-        return DISK_STATUS_NOMEDIA;
-    default:
-        return DISK_STATUS_OK;
-    }
+    return DISK_STATUS_OK;
 }
 
 static int gf_read(struct disk_info *disk, uint8_t *buf,

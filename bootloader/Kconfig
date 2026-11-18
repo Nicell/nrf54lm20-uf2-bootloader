@@ -42,26 +42,20 @@ config UF2_DOUBLE_TAP_DELAY_MS
     default 500
     range 100 5000
 
-config UF2_EJECT_QUIET_MS
-    int "Host idle time before reporting no media (ms)"
+config UF2_REBOOT_IDLE_MS
+    int "Host idle time before rebooting after an update (ms)"
     default 200
     help
-      After the image is committed, keep serving the disk until the host
-      has issued no reads or writes for this long, so its trailing
-      FAT/directory flush completes.
+      After the image is committed, keep serving the disk and reboot once
+      the host has issued no reads or writes for this long, so it can
+      finish the copy (directory entry, FAT, final status). Rebooting
+      earlier makes Windows report the copy as failed.
 
-config UF2_EJECT_ACK_MS
-    int "Delay after the host sees no media before rebooting (ms)"
-    default 200
-    help
-      Time for the host to finish unmounting after its first TEST UNIT
-      READY that returned "medium not present".
-
-config UF2_EJECT_TIMEOUT_MS
-    int "Reboot anyway this long after commit (ms)"
+config UF2_REBOOT_MAX_MS
+    int "Reboot at the latest this long after an update (ms)"
     default 3000
     help
-      Fallback for hosts that never poll the drive after the copy.
+      Upper bound for hosts that keep accessing the disk.
 
 config UF2_BOARD_ID
     string "Board ID string for INFO_UF2.TXT"
