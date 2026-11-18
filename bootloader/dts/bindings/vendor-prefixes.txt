@@ -1,0 +1,2 @@
+lily	Lily (Lily Ultra keyboard)
+uf2	UF2 bootloader bindings (this repository)

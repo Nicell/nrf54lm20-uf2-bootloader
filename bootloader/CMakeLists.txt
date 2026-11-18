@@ -11,6 +11,7 @@ project(uf2_bootloader LANGUAGES C)
 
 target_sources(app PRIVATE
     src/main.c
+    src/vregusb_reset.c
     src/app_image.c
     src/boot_entry.c
     src/uf2_status.c

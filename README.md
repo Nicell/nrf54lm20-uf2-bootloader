@@ -82,10 +82,24 @@ USB is never started on the normal boot path.
 
 ## Speed
 
+Measured on Lily Ultra over high-speed USB from macOS: a 1.64 MB image
+(3.28 MB UF2) commits in about 2.0 s, i.e. about 830 KB/s of firmware.
+RRAM writes account for about 0.32 s of that, so the rest is USB
+mass-storage and host overhead, not flash.
+
 * 16 KiB double-buffered SCSI buffers (`CONFIG_USBD_MSC_SCSI_BUFFER_SIZE`),
   so a high-speed host can stream multi-sector writes.
 * Full 32-word RRAMC write buffer (`CONFIG_NRF_RRAM_WRITE_BUFFER_SIZE=32`)
   instead of committing each 128-bit word.
+
+## VREGUSB across soft resets
+
+The nRF54L USB regulator (VREGUSB) survives a soft reset. If the previous
+firmware left it running, Zephyr's driver never sees a new "VBUS detected"
+event and USB never enumerates. `src/vregusb_reset.c` stops it at
+PRE_KERNEL_1 on every boot. Any application that enables USB itself and
+is entered by a soft reset (ZMK after `&bootloader`, or after a UF2
+update) gets a stopped regulator from the bootloader.
 
 ## Status and progress
 
@@ -93,6 +107,17 @@ USB is never started on the normal boot path.
 writing, done, error), entry reason, error code and block/byte progress.
 Backends register with `UF2_STATUS_LISTENER_DEFINE()`. The PWM LED
 (`pwm-led0` alias) is one listener; a display is meant to be another.
+
+## Test app
+
+`samples/bootmode_roundtrip` boots from slot0, prints over RTT, then sets
+boot mode BOOTLOADER and reboots, as ZMK's `&bootloader` does. It writes
+`zephyr.uf2` next to `zephyr.hex`:
+
+```sh
+west build -b lily_ultra_left/nrf54lm20a/cpuapp -d build/rt samples/bootmode_roundtrip
+cp build/rt/zephyr/zephyr.uf2 /Volumes/LILYULTRA/
+```
 
 ## Tests
 

@@ -40,6 +40,8 @@ static struct {
 	uint32_t vt_len;
 	uint8_t vt_data[UF2_PAYLOAD_MAX] __aligned(4);
 	uint8_t readback[UF2_PAYLOAD_MAX];
+	uint32_t t_start;    /* cycles at first block */
+	uint64_t flash_cyc;  /* cycles spent inside board_flash_write */
 	uint8_t mask[MAX_BLOCKS / 8 + 1];
 } st;
 
@@ -69,6 +71,7 @@ static bool begin(uint32_t num_blocks)
 	memset(&st, 0, sizeof(st));
 	st.active = true;
 	st.num_blocks = num_blocks;
+	st.t_start = k_cycle_get_32();
 
 	LOG_INF("transfer start: %u blocks", num_blocks);
 	uf2_status_set_state(UF2_STATE_WRITING);
@@ -103,7 +106,13 @@ static void commit(void)
 	}
 
 	st.finished = true;
-	LOG_INF("transfer complete: %u bytes", st.bytes_written);
+	uint32_t total_us = (uint32_t)k_cyc_to_us_floor64(k_cycle_get_32() - st.t_start);
+	uint32_t flash_us = (uint32_t)k_cyc_to_us_floor64(st.flash_cyc);
+
+	LOG_INF("transfer complete: %u bytes in %u ms (%u KB/s), RRAM writes %u ms",
+		st.bytes_written, total_us / 1000U,
+		total_us ? (uint32_t)((uint64_t)st.bytes_written * 1000U / total_us) : 0U,
+		flash_us / 1000U);
 	uf2_status_set_state(UF2_STATE_DONE);
 	/* Let the host finish its trailing SCSI traffic before we vanish. */
 	k_work_schedule(&reboot_work, K_MSEC(CONFIG_UF2_REBOOT_DELAY_MS));
@@ -180,7 +189,10 @@ void uf2_writer_sector(const UF2_Block *bl)
 			st.vt_len = bl->payloadSize;
 			st.have_vt = true;
 		} else {
+			uint32_t t0 = k_cycle_get_32();
+
 			rc = board_flash_write(bl->targetAddr, bl->data, bl->payloadSize);
+			st.flash_cyc += k_cycle_get_32() - t0;
 			if (rc) {
 				fail(UF2_ERR_WRITE);
 				return;
