@@ -15,10 +15,10 @@
 
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
-#include <zephyr/sys/reboot.h>
 
 #include "app_image.h"
 #include "board_flash.h"
+#include "ghostfat_disk.h"
 #include "uf2_status.h"
 #include "uf2_writer.h"
 
@@ -45,13 +45,6 @@ static struct {
 	uint8_t mask[MAX_BLOCKS / 8 + 1];
 } st;
 
-static void reboot_handler(struct k_work *work)
-{
-	ARG_UNUSED(work);
-	LOG_INF("rebooting into new image");
-	sys_reboot(SYS_REBOOT_WARM);
-}
-static K_WORK_DELAYABLE_DEFINE(reboot_work, reboot_handler);
 
 static void fail(enum uf2_error err)
 {
@@ -67,7 +60,7 @@ static bool begin(uint32_t num_blocks)
 		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 	};
 
-	(void)k_work_cancel_delayable(&reboot_work);
+	uf2_disk_cancel_eject();
 	memset(&st, 0, sizeof(st));
 	st.active = true;
 	st.num_blocks = num_blocks;
@@ -114,8 +107,8 @@ static void commit(void)
 		total_us ? (uint32_t)((uint64_t)st.bytes_written * 1000U / total_us) : 0U,
 		flash_us / 1000U);
 	uf2_status_set_state(UF2_STATE_DONE);
-	/* Let the host finish its trailing SCSI traffic before we vanish. */
-	k_work_schedule(&reboot_work, K_MSEC(CONFIG_UF2_REBOOT_DELAY_MS));
+	/* Let the host finish flushing and unmount before we vanish. */
+	uf2_disk_request_eject();
 }
 
 void uf2_writer_sector(const UF2_Block *bl)

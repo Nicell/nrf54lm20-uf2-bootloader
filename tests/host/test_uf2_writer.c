@@ -49,7 +49,8 @@ bool app_image_valid(void)
 	return sp > 0x20000000U && sp <= 0x20080000U && (pc & 1U) &&
 	       (pc & ~1U) >= APP_IMAGE_START && (pc & ~1U) < APP_IMAGE_END;
 }
-void sys_reboot(int t) { (void)t; }
+void uf2_disk_request_eject(void) { test_work_pending = true; }
+void uf2_disk_cancel_eject(void) { test_work_pending = false; }
 void uf2_status_set_state(enum uf2_state s) { st_now.state = s; if (s == UF2_STATE_WRITING) st_now.error = 0; }
 void uf2_status_set_error(enum uf2_error e) { st_now.error = e; st_now.state = UF2_STATE_ERROR; }
 void uf2_status_set_progress(uint32_t w, uint32_t t, uint32_t b) { st_now.blocks_written = w; st_now.blocks_total = t; st_now.bytes_written = b; }

@@ -28,6 +28,7 @@ python3 -m venv .venv && source .venv/bin/activate
 pip install west
 west init -l bootloader
 west update
+west patch -sm bootloader apply   # see bootloader/zephyr/patches.yml
 pip install -r zephyr/scripts/requirements-base.txt
 west build -b lily_ultra_left/nrf54lm20a/cpuapp -d build/left bootloader
 west flash -d build/left
@@ -78,6 +79,13 @@ USB is never started on the normal boot path.
   bootable image (stays in DFU), never half an image.
 * After the commit the bootloader **reboots** rather than jumping from a
   live USB session, so the app always starts on a clean chip.
+* Before rebooting it **ejects itself**: it waits for the host to stop
+  flushing (200 ms idle), then reports "medium not present". The host
+  unmounts on its next poll (about 1 s on macOS), and the bootloader
+  reboots 200 ms later, or after 3 s if the host never polls. No "Disk Not
+  Ejected Properly" on macOS. This needs the medium lock refused
+  (`CONFIG_USBD_MSC_MEDIUM_LOCK=n`, from `bootloader/zephyr/patches/`);
+  otherwise macOS stops polling a mounted drive.
 * After a failed transfer, dropping the same file again restarts it.
 
 ## Speed

@@ -10,6 +10,12 @@
  */
 int uf2_disk_register(void);
 
+/* Image committed: unmount politely from the host, then reboot. */
+void uf2_disk_request_eject(void);
+
+/* A new transfer started before the reboot: keep serving the disk. */
+void uf2_disk_cancel_eject(void);
+
 /*
  * Signal that the host has finished writing the UF2 file; schedules a
  * warm reset so the freshly-flashed application boots.
