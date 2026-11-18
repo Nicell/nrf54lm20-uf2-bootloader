@@ -23,6 +23,7 @@ enum uf2_state {
 	UF2_STATE_WRITING,     /* UF2 transfer in progress                  */
 	UF2_STATE_DONE,        /* image committed, about to reboot into it  */
 	UF2_STATE_ERROR,       /* transfer rejected; see uf2_status.error   */
+	UF2_STATE_REBOOTING,   /* about to reset; release peripherals        */
 };
 
 enum uf2_entry_reason {

@@ -14,6 +14,7 @@
 #include "uf2.h"
 #include "ghostfat_disk.h"
 #include "uf2_writer.h"
+#include "uf2_status.h"
 
 LOG_MODULE_REGISTER(uf2_disk, LOG_LEVEL_INF);
 
@@ -47,6 +48,7 @@ static void reboot_handler(struct k_work *work)
 {
     ARG_UNUSED(work);
     LOG_INF("rebooting %lld ms after commit", k_uptime_get() - commit_ms);
+    uf2_status_set_state(UF2_STATE_REBOOTING);
     sys_reboot(SYS_REBOOT_WARM);
 }
 static K_WORK_DELAYABLE_DEFINE(idle_work, reboot_handler);

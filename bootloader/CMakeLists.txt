@@ -23,6 +23,14 @@ target_sources(app PRIVATE
     src/indicator.c
 )
 
+target_sources_ifdef(CONFIG_UF2_DISPLAY app PRIVATE
+    src/display/lpm_panel.c
+    src/display/gfx.c
+    src/display/fonts.c
+    src/display/ui.c
+    src/display/ui_render.c
+)
+
 zephyr_linker_sources(SECTIONS src/sections-rom.ld)
 
 target_include_directories(app PRIVATE src)

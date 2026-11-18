@@ -7,6 +7,13 @@ CFLAGS := -std=gnu11 -Wall -Wextra -Werror -g -fsanitize=address,undefined \
 test_uf2_writer: test_uf2_writer.c $(SRC)/uf2_writer.c
 	$(CC) $(CFLAGS) -o $@ $^
 
+ui_preview: ui_preview.c $(SRC)/display/ui_render.c $(SRC)/display/gfx.c $(SRC)/display/fonts.c
+	$(CC) -std=gnu11 -Wall -Wextra -Werror -O2 -I$(SRC) -I$(SRC)/display -Istubs -o $@ $^
+
+.PHONY: preview
+preview: ui_preview
+	./ui_preview
+
 .PHONY: run
 run: test_uf2_writer
 	./test_uf2_writer

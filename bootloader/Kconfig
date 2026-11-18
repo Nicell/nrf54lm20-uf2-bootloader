@@ -57,6 +57,25 @@ config UF2_REBOOT_MAX_MS
     help
       Upper bound for hosts that keep accessing the disk.
 
+DT_CHOSEN_UF2_DISPLAY := zephyr,display
+
+config UF2_DISPLAY
+    bool "Status UI on the JDI LPM013M126A memory LCD"
+    default y if $(dt_chosen_enabled,$(DT_CHOSEN_UF2_DISPLAY))
+    select SPI
+    help
+      Show bootloader state and update progress on the display chosen
+      as zephyr,display (compatible jdi,lpm013m126). Only used in DFU
+      mode; a normal boot never touches the display.
+
+if UF2_DISPLAY
+
+config UF2_DISPLAY_BADGE
+    string "Small label at the top of the screen (e.g. LEFT)"
+    default ""
+
+endif
+
 config UF2_BOARD_ID
     string "Board ID string for INFO_UF2.TXT"
     default "ZMK-nRF54LM20-v0"

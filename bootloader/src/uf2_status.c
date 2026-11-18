@@ -71,6 +71,7 @@ const char *uf2_state_str(enum uf2_state state)
 	case UF2_STATE_WRITING:   return "writing";
 	case UF2_STATE_DONE:      return "done";
 	case UF2_STATE_ERROR:     return "error";
+	case UF2_STATE_REBOOTING: return "rebooting";
 	}
 	return "?";
 }

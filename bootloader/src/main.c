@@ -28,7 +28,14 @@ USBD_DEFINE_MSC_LUN(uf2, "UF2", "Lily", "UF2 Bootloader", "0.2");
 
 static int run_dfu(void)
 {
-	int rc = uf2_disk_register();
+	int rc;
+
+	if (IS_ENABLED(CONFIG_UF2_DISPLAY)) {
+		extern void ui_start(void);
+
+		ui_start(); /* panel init + first frame run on the UI thread */
+	}
+	rc = uf2_disk_register();
 
 	if (rc) {
 		return rc;

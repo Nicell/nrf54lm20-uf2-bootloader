@@ -1,2 +1,5 @@
 test_uf2_writer
 *.dSYM
+ui_preview
+ui_preview.ppm
+ui_preview.png

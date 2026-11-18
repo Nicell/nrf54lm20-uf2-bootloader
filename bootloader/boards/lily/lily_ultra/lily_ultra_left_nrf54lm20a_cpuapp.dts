@@ -7,6 +7,7 @@
 /dts-v1/;
 
 #include "lily_ultra_common.dtsi"
+#include <zephyr/dt-bindings/gpio/gpio.h>
 
 / {
 	model = "Lily Ultra left half (nRF54LM20A)";
@@ -17,9 +18,59 @@
 	 * while plugging in or powering up. The matrix is col2row (diode
 	 * cathodes on the rows), so drive the column high and sense the row.
 	 */
+	chosen {
+		zephyr,display = &display;
+	};
+
 	dfu_key: dfu-key {
 		compatible = "uf2,matrix-key";
 		drive-gpios = <&gpio3 12 GPIO_ACTIVE_HIGH>;
 		sense-gpios = <&gpio1 29 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>;
+	};
+};
+
+&pinctrl {
+	spi21_default: spi21_default {
+		group1 {
+			psels = <NRF_PSEL(SPIM_SCK, 3, 4)>,
+				<NRF_PSEL(SPIM_MOSI, 3, 11)>;
+		};
+	};
+
+	spi21_sleep: spi21_sleep {
+		group1 {
+			psels = <NRF_PSEL(SPIM_SCK, 3, 4)>,
+				<NRF_PSEL(SPIM_MOSI, 3, 11)>;
+			low-power-enable;
+		};
+	};
+};
+
+/*
+ * JDI LPM013M126A 176x176 8-color memory LCD on the carrier board.
+ * SCS is active high. EXTMODE is tied high on the carrier, so EXTCOMIN
+ * must toggle while the panel is on (1-140 Hz). P0.03 can later be
+ * driven by GRTC PWM for low-power always-on use.
+ */
+&spi21 {
+	status = "okay";
+	pinctrl-0 = <&spi21_default>;
+	pinctrl-1 = <&spi21_sleep>;
+	pinctrl-names = "default", "sleep";
+	cs-gpios = <&gpio3 2 GPIO_ACTIVE_HIGH>;
+
+	display: lcd@0 {
+		compatible = "jdi,lpm013m126";
+		reg = <0>;
+		/* JDI: typ 1 MHz, max 2 MHz at 3.0 V. */
+		spi-max-frequency = <2000000>;
+		/* tsSCS >= 6 us, thSCS >= 2 us. */
+		spi-cs-setup-delay-ns = <6000>;
+		spi-cs-hold-delay-ns = <2000>;
+		width = <176>;
+		height = <176>;
+		disp-gpios = <&gpio3 0 GPIO_ACTIVE_HIGH>;
+		extcomin-gpios = <&gpio0 3 GPIO_ACTIVE_HIGH>;
+		extcomin-frequency = <4>;
 	};
 };

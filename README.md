@@ -108,6 +108,32 @@ PRE_KERNEL_1 on every boot. Any application that enables USB itself and
 is entered by a soft reset (ZMK after `&bootloader`, or after a UF2
 update) gets a stopped regulator from the bootloader.
 
+## Display
+
+On boards with a `zephyr,display` chosen node using the `jdi,lpm013m126`
+compatible (Lily Ultra), DFU mode shows its state on the JDI LPM013M126A
+memory LCD:
+
+![Bootloader screens](docs/ui-screens.png)
+
+Connect, drop a `.uf2`, progress, done; failures show a red cross and a
+two-word reason. Black background for a black case, white content, color
+only as accents. A normal boot never touches the display.
+
+* `src/display/lpm_panel.c`: own driver, written from the JDI spec. Zephyr's
+  driver bit-reverses the gate address (the panel wants plain line numbers,
+  MSB first), skips the 16 trailing clocks, and needs a 60 KB RGB565 frame.
+  This one keeps a native 3-bit frame (11.6 KB), sends only changed lines
+  in one multi-line burst at 2 MHz (a full frame takes 48 ms), toggles
+  EXTCOMIN from a timer, and follows the datasheet power on/off sequences.
+* `src/display/ui_render.c`: pure drawing from a status snapshot. Fonts are
+  DroidSansMono from Zephyr's CFB fonts, converted by `scripts/gen_fonts.py`
+  and drawn proportionally.
+* `src/display/ui.c`: status listener that redraws on a low-priority
+  thread; progress redraws are throttled so USB throughput is unaffected.
+* Preview every screen on the host without hardware:
+  `make -C tests/host preview` writes `tests/host/ui_preview.ppm`.
+
 ## Status and progress
 
 `src/uf2_status.h` is a small status bus: state (waiting, connected,
