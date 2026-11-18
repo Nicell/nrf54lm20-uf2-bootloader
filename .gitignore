@@ -3,8 +3,8 @@
 # bootloader/west.yml is the source of truth.
 .west/
 .venv/
-zephyr/
-modules/
+/zephyr/
+/modules/
 build*/
 
 # Build artefacts
