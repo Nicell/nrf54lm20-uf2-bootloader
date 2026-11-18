@@ -1,33 +1,24 @@
-/* SPDX-License-Identifier: MIT */
+/*
+ * SPDX-License-Identifier: MIT
+ *
+ * slot0 access for the UF2 engine. Addresses are absolute (as in UF2
+ * targetAddr); everything outside slot0 is rejected.
+ */
 
 #ifndef UF2_BOARD_FLASH_H
 #define UF2_BOARD_FLASH_H
 
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
 
-#include <zephyr/storage/flash_map.h>
+#include "app_image.h"
 
-/* Base address that UF2 target addresses are measured against. */
-#define BOARD_FLASH_ADDR_ZERO       0
+#define BOARD_FLASH_APP_START APP_IMAGE_START
 
-/* First byte the bootloader may write — start of slot0_partition. */
-#define BOARD_FLASH_APP_START       PARTITION_OFFSET(slot0_partition)
-
-/* Size of the flash region the bootloader exposes as CURRENT.UF2. */
 uint32_t board_flash_size(void);
-
-/* Read len bytes from absolute flash addr into buffer. */
+uint32_t board_flash_write_align(void);
+bool board_flash_in_slot(uint32_t addr, uint32_t len);
 void board_flash_read(uint32_t addr, void *buffer, uint32_t len);
-
-/*
- * Write len bytes to absolute flash addr. UF2 payloads are 256 B and
- * addresses are 256 B aligned. RRAM is write-anywhere, so no explicit
- * erase is needed.
- */
-bool board_flash_write(uint32_t addr, void const *data, uint32_t len);
-
-/* Flush any cached state to flash. */
-void board_flash_flush(void);
+int board_flash_write(uint32_t addr, const void *data, uint32_t len);
 
 #endif /* UF2_BOARD_FLASH_H */

@@ -14,6 +14,5 @@ int uf2_disk_register(void);
  * Signal that the host has finished writing the UF2 file; schedules a
  * warm reset so the freshly-flashed application boots.
  */
-void uf2_disk_on_complete(void);
 
 #endif

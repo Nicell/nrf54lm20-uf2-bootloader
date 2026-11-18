@@ -1,0 +1,11 @@
+boards:
+  - name: lily_ultra_left
+    full_name: Lily Ultra (left half)
+    vendor: lily
+    socs:
+      - name: nrf54lm20a
+  - name: lily_ultra_right
+    full_name: Lily Ultra (right half)
+    vendor: lily
+    socs:
+      - name: nrf54lm20a

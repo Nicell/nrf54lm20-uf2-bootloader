@@ -9,17 +9,14 @@
 #include <zephyr/drivers/disk.h>
 #include <zephyr/logging/log.h>
 
-#include "board_flash.h"
-#include "boot_jump.h"
 #include "uf2.h"
 #include "ghostfat_disk.h"
+#include "uf2_writer.h"
 
 LOG_MODULE_REGISTER(uf2_disk, LOG_LEVEL_INF);
 
 #define GHOSTFAT_DISK_NAME      "UF2"
 #define GHOSTFAT_SECTOR_SIZE    512U
-
-static WriteState write_state;
 
 static int gf_init(struct disk_info *disk)
 {
@@ -49,7 +46,8 @@ static int gf_write(struct disk_info *disk, const uint8_t *buf,
 {
     ARG_UNUSED(disk);
     while (cnt--) {
-        (void)uf2_write_block(lba++, (uint8_t *)buf, &write_state);
+        uf2_writer_sector((const UF2_Block *)buf);
+        lba++;
         buf += GHOSTFAT_SECTOR_SIZE;
     }
     return 0;
@@ -100,28 +98,6 @@ static struct disk_info gf_disk = {
     .name = GHOSTFAT_DISK_NAME,
     .ops  = &gf_ops,
 };
-
-/*
- * After the host finishes writing every UF2 block, give the MSC layer
- * a moment to drain its final SCSI response before chain-loading. We
- * deliberately do NOT call usbd_disable() — with the MSC class still
- * mid-transfer, its cancel-then-cleanup path can deref a freed pointer
- * and trip a USAGE_FAULT. boot_jump_to_app() disables every IRQ before
- * the branch, which silences the controller from the bus side; the
- * application reinitializes USB from scratch.
- */
-static void boot_app_work_handler(struct k_work *work)
-{
-    ARG_UNUSED(work);
-    LOG_INF("UF2 transfer complete -- chain-loading application");
-    boot_jump_to_app(BOARD_FLASH_APP_START);
-}
-static K_WORK_DELAYABLE_DEFINE(boot_app_work, boot_app_work_handler);
-
-void uf2_disk_on_complete(void)
-{
-    k_work_schedule(&boot_app_work, K_MSEC(200));
-}
 
 int uf2_disk_register(void)
 {

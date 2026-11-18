@@ -1,0 +1,139 @@
+/*
+ * SPDX-License-Identifier: MIT
+ *
+ * Lily Ultra: split keyboard, one Raytac AN54LM-20A (nRF54LM20A) per half,
+ * nPM1300 PMIC, USB-C (USBHS), JDI LPM013M126A display.
+ *
+ * Shared by both halves. Per-half pins live in the board .dts files.
+ */
+
+#include <nordic/nrf54lm20a_cpuapp.dtsi>
+
+/ {
+	chosen {
+		zephyr,sram = &cpuapp_sram;
+		zephyr,flash-controller = &rram_controller;
+		zephyr,flash = &cpuapp_rram;
+		zephyr,code-partition = &slot0_partition;
+		zephyr,boot-mode = &boot_mode0;
+	};
+};
+
+&cpuapp_sram {
+	status = "okay";
+};
+
+&hfpll {
+	clock-frequency = <DT_FREQ_M(128)>;
+};
+
+/*
+ * Board Y1/Y2: Epson FC-12M 32.768 kHz, 7 pF load. No external load
+ * capacitors are fitted, so use the SoC's internal ones.
+ */
+&lfxo {
+	load-capacitors = "internal";
+	load-capacitance-femtofarad = <7000>;
+};
+
+/*
+ * The 32 MHz crystal is inside the module; Raytac says its load is "already
+ * optimized in the module design". TODO: confirm with Raytac whether that
+ * means external caps (then use load-capacitors = "external") or the DK's
+ * internal 15 pF setting. Matters for radio frequency accuracy, not USB.
+ */
+&hfxo {
+	load-capacitors = "internal";
+	load-capacitance-femtofarad = <15000>;
+};
+
+/* DCDC inductor and DECD capacitor are inside the module. */
+&vregmain {
+	status = "okay";
+	regulator-initial-mode = <NRF5X_REG_MODE_DCDC>;
+};
+
+&vregusb {
+	status = "okay";
+};
+
+&grtc {
+	owned-channels = <0 1 2 3 4 5 6 7 8 9 10 11>;
+	child-owned-channels = <3 4 7 8 9 10 11>;
+	status = "okay";
+};
+
+&clock {
+	status = "okay";
+};
+
+&gpio0 {
+	status = "okay";
+};
+
+&gpio1 {
+	status = "okay";
+};
+
+&gpio3 {
+	status = "okay";
+};
+
+&gpiote20 {
+	status = "okay";
+};
+
+&gpiote30 {
+	status = "okay";
+};
+
+zephyr_udc0: &usbhs {
+	status = "okay";
+};
+
+/* Zephyr boot-mode retention; ZMK's &bootloader writes this byte. */
+&gpregret1 {
+	status = "okay";
+
+	boot_mode0: boot_mode@0 {
+		compatible = "zephyr,retention";
+		status = "okay";
+		reg = <0x0 0x1>;
+	};
+};
+
+/*
+ * RRAM layout (2036 KiB). The FLPR core is unused, so its default 96 KiB
+ * reservation is given back to the application.
+ *
+ *   0x000000  128 KiB   UF2 bootloader
+ *   0x020000  1808 KiB  application (ZMK)
+ *   0x1e4000  100 KiB   settings storage
+ */
+&cpuapp_rram {
+	partitions {
+		compatible = "fixed-partitions";
+		ranges;
+		#address-cells = <1>;
+		#size-cells = <1>;
+
+		boot_partition: partition@0 {
+			compatible = "zephyr,mapped-partition";
+			label = "uf2-bootloader";
+			reg = <0x000000 DT_SIZE_K(128)>;
+			read-only;
+		};
+
+		slot0_partition: partition@20000 {
+			compatible = "zephyr,mapped-partition";
+			label = "image-0";
+			reg = <0x020000 DT_SIZE_K(1808)>;
+		};
+
+		storage_partition: partition@1e4000 {
+			compatible = "zephyr,mapped-partition";
+			label = "storage";
+			reg = <0x1e4000 DT_SIZE_K(100)>;
+		};
+	};
+};

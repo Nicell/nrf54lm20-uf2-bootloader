@@ -27,17 +27,27 @@ config UF2_USBD_PRODUCT
     string "USB product string"
     default "ZMK UF2 Bootloader"
 
-config UF2_DBL_TAP_DELAY_MS
+config UF2_DOUBLE_TAP
+    bool "Enter DFU on a double reset"
+    default y
+    help
+      On every normal boot, arm the boot-mode flag and wait
+      UF2_DOUBLE_TAP_DELAY_MS before starting the app; a second reset
+      inside that window enters DFU. Costs that delay on every boot, so
+      turn it off on boards without a reset button.
+
+config UF2_DOUBLE_TAP_DELAY_MS
     int "Double-tap detection window (ms)"
+    depends on UF2_DOUBLE_TAP
     default 500
     range 100 5000
-    help
-      How long to hold the double-tap magic in noinit RAM on a normal
-      cold boot. A second reset within this window leaves the magic set
-      and the next boot enters DFU. Smaller values reduce the perceptible
-      "boot delay" on every reset but make the window harder for a human
-      to hit; larger values are friendlier but delay every app boot.
 
+config UF2_REBOOT_DELAY_MS
+    int "Delay between committing an image and rebooting into it (ms)"
+    default 250
+    help
+      Lets the host finish its trailing SCSI traffic (FAT/directory
+      updates) before the device disappears.
 
 config UF2_BOARD_ID
     string "Board ID string for INFO_UF2.TXT"
@@ -62,13 +72,6 @@ config UF2_FAMILY_ID
       Unique 32-bit family ID for this board. Used by the host-side UF2
       tooling to refuse images built for a different chip family. Should
       eventually be registered at https://github.com/microsoft/uf2.
-
-config UF2_FLASH_SIZE
-    int "Bytes of application flash the host sees in CURRENT.UF2"
-    default 1884160
-    help
-      Size of the application partition exposed to the host as CURRENT.UF2.
-      Default matches slot0_partition size on nrf54lm20 (1840 KiB).
 
 config UF2_NUM_BLOCKS
     int "Number of 512-byte sectors in the synthesized FAT16 volume"

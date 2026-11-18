@@ -18,7 +18,6 @@
 
 #include "compile_date.h"
 #include "board_flash.h"
-#include "indicator.h"
 #include "uf2.h"
 
 LOG_MODULE_REGISTER(ghostfat, LOG_LEVEL_INF);
@@ -178,15 +177,6 @@ static FAT_BootBlock TINYUF2_CONST BootBlock = {
     .VolumeLabel          = CONFIG_UF2_VOLUME_LABEL,
     .FilesystemIdentifier = "FAT16   ",
 };
-
-static inline bool is_uf2_block(UF2_Block const *bl)
-{
-    return (bl->magicStart0 == UF2_MAGIC_START0) &&
-           (bl->magicStart1 == UF2_MAGIC_START1) &&
-           (bl->magicEnd    == UF2_MAGIC_END)    &&
-           (bl->flags & UF2_FLAG_FAMILYID)       &&
-           !(bl->flags & UF2_FLAG_NOFLASH);
-}
 
 static void init_starting_clusters(void)
 {
@@ -352,7 +342,7 @@ void uf2_read_block(uint32_t block_no, uint8_t *data)
             }
         } else {
             uint32_t addr = BOARD_FLASH_APP_START + (fileRelativeSector * UF2_FIRMWARE_BYTES_PER_SECTOR);
-            if (addr < (BOARD_FLASH_ADDR_ZERO + _flash_size)) {
+            if (addr < (BOARD_FLASH_APP_START + _flash_size)) {
                 UF2_Block *bl = (void *)data;
                 bl->magicStart0 = UF2_MAGIC_START0;
                 bl->magicStart1 = UF2_MAGIC_START1;
@@ -368,48 +358,4 @@ void uf2_read_block(uint32_t block_no, uint8_t *data)
             }
         }
     }
-}
-
-int uf2_write_block(uint32_t block_no, uint8_t *data, WriteState *state)
-{
-    (void)block_no;
-    UF2_Block *bl = (void *)data;
-
-    if (!is_uf2_block(bl)) {
-        return -1;
-    }
-    if (bl->familyID != BOARD_UF2_FAMILY_ID) {
-        return -1;
-    }
-
-    if (!board_flash_write(bl->targetAddr, bl->data, bl->payloadSize)) {
-        LOG_WRN("flash_write failed at 0x%08x", bl->targetAddr);
-        return -1;
-    }
-
-    if (bl->numBlocks) {
-        if (state->numBlocks != bl->numBlocks) {
-            state->numBlocks = (bl->numBlocks >= MAX_BLOCKS || state->numBlocks)
-                                   ? 0xffffffff
-                                   : bl->numBlocks;
-        }
-
-        if (bl->blockNo < MAX_BLOCKS) {
-            uint8_t const mask = 1 << (bl->blockNo % 8);
-            uint32_t const pos = bl->blockNo / 8;
-
-            if (!(state->writtenMask[pos] & mask)) {
-                state->writtenMask[pos] |= mask;
-                state->numWritten++;
-            }
-
-            indicator_set(INDICATOR_WRITING);
-
-            if (state->numWritten >= state->numBlocks) {
-                board_flash_flush();
-            }
-        }
-    }
-
-    return BPB_SECTOR_SIZE;
 }

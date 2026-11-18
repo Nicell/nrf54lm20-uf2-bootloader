@@ -16,7 +16,7 @@
 #include <zephyr/logging/log.h>
 #include <zephyr/usb/usbd.h>
 
-#include "indicator.h"
+#include "uf2_status.h"
 #include "usbd_setup.h"
 
 LOG_MODULE_REGISTER(uf2_usbd, LOG_LEVEL_INF);
@@ -56,13 +56,16 @@ static void uf2_usbd_msg_cb(struct usbd_context *ctx, const struct usbd_msg *msg
         if (usbd_can_detect_vbus(ctx)) {
             (void)usbd_disable(ctx);
         }
-        indicator_set(INDICATOR_UNPLUGGED);
+        uf2_status_set_state(UF2_STATE_WAITING);
         break;
     case USBD_MSG_CONFIGURATION:
-        indicator_set(INDICATOR_PLUGGED);
+        uf2_status_set_state(UF2_STATE_CONNECTED);
         break;
     case USBD_MSG_SUSPEND:
-        indicator_set(INDICATOR_UNPLUGGED);
+        uf2_status_set_state(UF2_STATE_WAITING);
+        break;
+    case USBD_MSG_RESUME:
+        uf2_status_set_state(UF2_STATE_CONNECTED);
         break;
     default:
         break;

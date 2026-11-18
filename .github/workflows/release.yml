@@ -19,14 +19,13 @@ jobs:
           app-path: bootloader
           toolchains: arm-zephyr-eabi
 
-      - name: Build
-        run: west build -b nrf54lm20dk/nrf54lm20a/cpuapp bootloader
-
-      - name: Stage release assets
+      - name: Build and stage release assets
         run: |
           mkdir -p out
-          cp build/zephyr/zephyr.uf2 "out/nrf54lm20dk-uf2-bootloader-${{ github.ref_name }}.uf2"
-          cp build/zephyr/zephyr.hex "out/nrf54lm20dk-uf2-bootloader-${{ github.ref_name }}.hex"
+          for b in nrf54lm20dk lily_ultra_left lily_ultra_right; do
+            west build -p -b "$b/nrf54lm20a/cpuapp" -d "build/$b" bootloader
+            cp "build/$b/zephyr/zephyr.hex" "out/$b-uf2-bootloader-${{ github.ref_name }}.hex"
+          done
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2

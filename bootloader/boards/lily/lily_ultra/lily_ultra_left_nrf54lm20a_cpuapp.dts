@@ -1,0 +1,25 @@
+/*
+ * SPDX-License-Identifier: MIT
+ *
+ * Lily Ultra left half. Pin map: lily-ultra GPIO_ASSIGNMENTS.md (2026-09-12).
+ */
+
+/dts-v1/;
+
+#include "lily_ultra_common.dtsi"
+
+/ {
+	model = "Lily Ultra left half (nRF54LM20A)";
+	compatible = "lily,lily-ultra-left";
+
+	/*
+	 * Bootloader entry key: the outermost top-row key (row0/col0), held
+	 * while plugging in or powering up. The matrix is col2row (diode
+	 * cathodes on the rows), so drive the column high and sense the row.
+	 */
+	dfu_key: dfu-key {
+		compatible = "uf2,matrix-key";
+		drive-gpios = <&gpio3 12 GPIO_ACTIVE_HIGH>;
+		sense-gpios = <&gpio1 29 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>;
+	};
+};

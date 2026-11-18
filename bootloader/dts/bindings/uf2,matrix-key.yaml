@@ -1,0 +1,20 @@
+# SPDX-License-Identifier: MIT
+
+description: |
+  One key of a diode keyboard matrix, used to force the UF2 bootloader at
+  boot. The bootloader drives drive-gpios active and reports the key as held
+  if sense-gpios reads active only while it is driven (so a stuck or shorted
+  sense line does not trap the board in DFU mode).
+
+compatible: "uf2,matrix-key"
+
+properties:
+  drive-gpios:
+    type: phandle-array
+    required: true
+    description: Matrix line to drive (column for col2row).
+
+  sense-gpios:
+    type: phandle-array
+    required: true
+    description: Matrix line to read, with its pull flag (row for col2row).

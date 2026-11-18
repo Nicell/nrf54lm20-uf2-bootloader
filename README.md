@@ -1,105 +1,135 @@
 # nRF54LM20 UF2 Bootloader
 
-A small UF2 bootloader for the nRF54LM20A/B SoC. On reset, holding the user
-button (or double-tapping reset) drops the device into DFU mode: it
-enumerates as a USB mass-storage volume that accepts a `.uf2`
-drag-and-drop. The application is flashed in place and chain-loaded; no
-extra reboot.
+A small UF2 bootloader for the nRF54LM20A/B. In DFU mode it enumerates as a
+USB mass-storage drive (high-speed USB when the host supports it); drop a
+`.uf2` on it and the app is written, committed, and booted.
 
-> [!NOTE]
-> [nRF54LM20 DK](https://www.nordicsemi.com/Products/Development-hardware/nRF54LM20-DK) is the only board supported and tested for now.
+Fork of [carrefinho/nrf54lm20-uf2-bootloader](https://github.com/carrefinho/nrf54lm20-uf2-bootloader)
+with Lily Ultra board support and the changes listed under
+[Differences from upstream](#differences-from-upstream).
+
+## Boards
+
+| Target | Notes |
+|---|---|
+| `nrf54lm20dk/nrf54lm20a/cpuapp` | Button 0 held at reset, or double-tap reset |
+| `lily_ultra_left/nrf54lm20a/cpuapp` | Lily Ultra left half |
+| `lily_ultra_right/nrf54lm20a/cpuapp` | Lily Ultra right half |
+
+The Lily Ultra board files (`bootloader/boards/lily/lily_ultra/`) are
+written to be reused as-is by the ZMK build.
 
 ## Quick start
 
 ```sh
-git clone https://github.com/carrefinho/nrf54lm20-uf2-bootloader.git
+git clone https://github.com/Nicell/nrf54lm20-uf2-bootloader.git
 cd nrf54lm20-uf2-bootloader
-python3 -m venv .venv
-source .venv/bin/activate
+python3 -m venv .venv && source .venv/bin/activate
 pip install west
 west init -l bootloader
 west update
-west zephyr-export
 pip install -r zephyr/scripts/requirements-base.txt
-west build -b nrf54lm20dk/nrf54lm20a/cpuapp bootloader
-west flash
+west build -b lily_ultra_left/nrf54lm20a/cpuapp -d build/left bootloader
+west flash -d build/left
 ```
 
-## Layout
+Needs Zephyr SDK 1.0.1 (`ZEPHYR_SDK_INSTALL_DIR` if not in a default path).
 
-```
-nrf54lm20-uf2-bootloader/
-├── bootloader/         ← Zephyr application + west manifest
-│   ├── west.yml        (pulls Zephyr v4.4.0)
-│   ├── CMakeLists.txt
-│   ├── boards/         (DT overlay carving partitions)
-│   └── src/
-├── zephyr/             ← pulled by west, gitignored
-└── modules/            ← pulled by west, gitignored
-```
-
-## Partition layout (nRF54LM20A cpuapp_rram, 2 MiB)
+## Partition layout (2036 KiB RRAM)
 
 | Partition | Offset | Size |
 |---|---|---|
-| `boot_partition` | `0x000000` | 96 KiB |
-| `slot0_partition` | `0x018000` | 1840 KiB |
+| `boot_partition` | `0x000000` | 128 KiB |
+| `slot0_partition` | `0x020000` | 1808 KiB |
 | `storage_partition` | `0x1e4000` | 100 KiB |
 
-The application must be linked with `zephyr,code-partition = &slot0_partition;`.
+Applications are linked with `zephyr,code-partition = &slot0_partition;`
+(the Lily Ultra board does this by default). The FLPR core's default 96 KiB
+reservation is not used.
 
-## DFU button
+## Entering DFU
 
-DFU is entered on a double-tap of reset, when slot0 is empty, or — if a
-`dfu-button` alias is present — while that button is held at boot. The DK
-overlay binds it to `button0`:
+Checked in this order on every boot:
 
-```dts
-/ {
-    aliases {
-        dfu-button = &button0;
-    };
-};
+1. **Boot-mode retention.** Zephyr's standard boot-mode API (one
+   `gpregret1` byte, `zephyr,boot-mode` chosen node). ZMK's `&bootloader`
+   behavior with `CONFIG_RETENTION_BOOT_MODE=y` sets it and reboots.
+2. **DFU key** (`compatible = "uf2,matrix-key"`). One matrix key held at
+   power-up. On Lily Ultra it is the outermost top-row key (row0/col0) of
+   each half. The key only counts if the row follows the column, so a
+   shorted line cannot trap the board in DFU.
+3. **DFU button** (`dfu-button` alias), on the DK.
+4. **No valid app**: slot0's vector table fails sanity checks.
+5. **Double tap** (`CONFIG_UF2_DOUBLE_TAP`, on by default, off on Lily
+   Ultra which has no reset button). Costs the window on every boot.
+
+USB is never started on the normal boot path.
+
+## Update flow and crash safety
+
+* Each UF2 block is checked: magic, family ID, `payloadSize <= 476`,
+  `blockNo < numBlocks`, target fully inside slot0, 16-byte RRAM alignment.
+  Blocks from other families and non-UF2 sectors (FAT metadata, macOS `._`
+  files) are ignored.
+* When a new transfer starts, the old app's vector table is wiped first.
+  The block that holds the new vector table is kept in RAM and written
+  only after every other block has landed, then read back and validated.
+  Unplugging mid-copy therefore leaves either the old image intact or no
+  bootable image (stays in DFU), never half an image.
+* After the commit the bootloader **reboots** rather than jumping from a
+  live USB session, so the app always starts on a clean chip.
+* After a failed transfer, dropping the same file again restarts it.
+
+## Speed
+
+* 16 KiB double-buffered SCSI buffers (`CONFIG_USBD_MSC_SCSI_BUFFER_SIZE`),
+  so a high-speed host can stream multi-sector writes.
+* Full 32-word RRAMC write buffer (`CONFIG_NRF_RRAM_WRITE_BUFFER_SIZE=32`)
+  instead of committing each 128-bit word.
+
+## Status and progress
+
+`src/uf2_status.h` is a small status bus: state (waiting, connected,
+writing, done, error), entry reason, error code and block/byte progress.
+Backends register with `UF2_STATUS_LISTENER_DEFINE()`. The PWM LED
+(`pwm-led0` alias) is one listener; a display is meant to be another.
+
+## Tests
+
+Host tests for the UF2 writer state machine (normal, out-of-order,
+interrupted, malformed, out-of-range, flash-error-then-retry):
+
+```sh
+make -C tests/host
 ```
 
-## Indicator LED
+## USB VID/PID and family ID
 
-The `pwm-led0` DT alias (present on the LM20 DK) is driven through four
-states:
+Nordic's VID (`0x1915`) with a placeholder PID, and family ID
+`0x4ED75C3F`, as upstream. Replace the VID/PID before shipping
+(`UF2_USBD_VID` / `UF2_USBD_PID`).
 
-- **UNPLUGGED** — slow breathe, waiting for USB host
-- **PLUGGED** — fast breathe, host enumerated
-- **WRITING** — hard fast blink, UF2 block in flight
-- **FINISHED** — solid on, transfer complete
+## Differences from upstream
 
-On a custom board, bind the alias to a PWM LED node:
-
-```dts
-/ {
-    aliases {
-        pwm-led0 = &pwm_led0;
-    };
-};
-```
-
-## USB VID/PID
-
-The device enumerates under Nordic's VID (`0x1915`), which Nordic
-[permits for development](https://devzone.nordicsemi.com/f/nordic-q-a/83664/custom-usb-device-descriptor-with-nordic-semiconductor-s-vendor-id),
-with a placeholder PID. Both are subject to change — replace them with an
-assigned VID/PID before shipping (`UF2_USBD_VID` / `UF2_USBD_PID` in
-`bootloader/Kconfig`).
+* Lily Ultra left/right boards; 128 KiB bootloader partition.
+* Boot-mode retention instead of a magic word in no-init RAM.
+* Matrix-key entry; double tap optional.
+* Per-block validation, deferred vector-table commit, reboot instead of
+  chain-loading out of a live USB session.
+* Stricter vector-table check (SP inside SRAM, reset handler inside slot0)
+  and a fuller CPU reset before jumping (NVIC pending, stack limits,
+  CONTROL, caches).
+* Fixed CURRENT.UF2 being truncated: the bound compared against the slot
+  size instead of slot end.
+* Status bus replacing the LED-only indicator.
+* Larger MSC buffers and RRAMC write buffer.
 
 ## Credits
 
 The UF2 / ghost-FAT engine (`src/ghostfat.c`, `src/uf2.h`, `src/compile_date.h`)
 is ported from [tinyuf2](https://github.com/adafruit/tinyuf2) — itself descended
 from Microsoft's [uf2-samdx1](https://github.com/microsoft/uf2-samdx1) and
-Adafruit's work, with the on-the-fly FAT16 synthesis by Henry Gabryjelski. The
-double-tap magic values (`0xf01669ef` / `0xf02669ef`) match those used by tinyuf2
-and the
-[Adafruit nRF52 bootloader](https://github.com/adafruit/Adafruit_nRF52_Bootloader),
-so an application's "reboot into bootloader" path works here unchanged.
+Adafruit's work, with the on-the-fly FAT16 synthesis by Henry Gabryjelski..
 
 ## License
 

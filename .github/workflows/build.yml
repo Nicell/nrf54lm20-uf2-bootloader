@@ -2,13 +2,29 @@ name: Build
 
 on:
   push:
-    branches: [main]
   pull_request:
   workflow_dispatch:
 
 jobs:
+  host-tests:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: UF2 writer tests
+        run: make -C tests/host
+
   build:
     runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: nrf54lm20dk
+            board: nrf54lm20dk/nrf54lm20a/cpuapp
+          - name: lily_ultra_left
+            board: lily_ultra_left/nrf54lm20a/cpuapp
+          - name: lily_ultra_right
+            board: lily_ultra_right/nrf54lm20a/cpuapp
     steps:
       - uses: actions/checkout@v4
 
@@ -18,13 +34,12 @@ jobs:
           toolchains: arm-zephyr-eabi
 
       - name: Build
-        run: west build -b nrf54lm20dk/nrf54lm20a/cpuapp bootloader
+        run: west build -b ${{ matrix.board }} bootloader
 
       - name: Upload artefacts
         uses: actions/upload-artifact@v4
         with:
-          name: nrf54lm20dk-uf2-bootloader
+          name: ${{ matrix.name }}-uf2-bootloader
           path: |
-            build/zephyr/zephyr.uf2
             build/zephyr/zephyr.hex
             build/zephyr/zephyr.elf

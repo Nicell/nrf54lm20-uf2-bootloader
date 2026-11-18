@@ -1,12 +1,13 @@
 /*
  * SPDX-License-Identifier: MIT
  *
- * PWM LED indicator. Drives `pwm-led0`:
+ * PWM LED backend for the status bus. Drives `pwm-led0`:
  *
- *   UNPLUGGED   slow triangle breathe (~1.5 s)
- *   PLUGGED     faster triangle breathe (~0.5 s)
+ *   WAITING     slow triangle breathe (~1.5 s)
+ *   CONNECTED   faster triangle breathe (~0.5 s)
  *   WRITING     fast hard blink
- *   FINISHED    solid on
+ *   DONE        solid on
+ *   ERROR       double blink
  *
  * No-op if `pwm-led0` isn't defined on the board.
  */
@@ -16,7 +17,7 @@
 #include <zephyr/drivers/pwm.h>
 #include <zephyr/logging/log.h>
 
-#include "indicator.h"
+#include "uf2_status.h"
 
 LOG_MODULE_REGISTER(indicator, LOG_LEVEL_INF);
 
@@ -34,7 +35,7 @@ static const struct pwm_dt_spec led_pwm = PWM_DT_SPEC_GET(PWM_LED_NODE);
 #define UNPLUGGED_PERIOD_TICKS  75U
 #define PLUGGED_PERIOD_TICKS    25U
 
-static volatile enum indicator_state current_state = INDICATOR_UNPLUGGED;
+static volatile enum uf2_state current_state = UF2_STATE_BOOTING;
 static uint16_t tick;
 
 static uint8_t triangle(uint16_t t, uint16_t period_ticks)
@@ -43,13 +44,14 @@ static uint8_t triangle(uint16_t t, uint16_t period_ticks)
     return phase < 128 ? (uint8_t)(phase * 2) : (uint8_t)((255 - phase) * 2);
 }
 
-static uint8_t compute_duty(enum indicator_state state, uint16_t t)
+static uint8_t compute_duty(enum uf2_state state, uint16_t t)
 {
     switch (state) {
-    case INDICATOR_UNPLUGGED: return triangle(t, UNPLUGGED_PERIOD_TICKS);
-    case INDICATOR_PLUGGED:   return triangle(t, PLUGGED_PERIOD_TICKS);
-    case INDICATOR_WRITING:   return (t & 0x3) < 2 ? 200 : 0;
-    case INDICATOR_FINISHED:  return 200;
+    case UF2_STATE_WAITING:   return triangle(t, UNPLUGGED_PERIOD_TICKS);
+    case UF2_STATE_CONNECTED: return triangle(t, PLUGGED_PERIOD_TICKS);
+    case UF2_STATE_WRITING:   return (t & 0x3) < 2 ? 200 : 0;
+    case UF2_STATE_DONE:      return 200;
+    case UF2_STATE_ERROR:     return ((t % 50U) < 4 || ((t % 50U) >= 8 && (t % 50U) < 12)) ? 200 : 0;
     default:                  return 0;
     }
 }
@@ -78,12 +80,11 @@ static void tick_handler(struct k_work *work)
     k_work_schedule(&tick_work, K_MSEC(TICK_MS));
 }
 
-void indicator_set(enum indicator_state state)
+static void on_status(const struct uf2_status *status)
 {
-    current_state = state;
+    current_state = status->state;
 #if HAS_PWM_LED
-    if (!device_is_ready(led_pwm.dev)) {
-        LOG_WRN("pwm-led0 device not ready");
+    if (status->state == UF2_STATE_BOOTING || !device_is_ready(led_pwm.dev)) {
         return;
     }
     if (!k_work_delayable_is_pending(&tick_work)) {
@@ -91,3 +92,5 @@ void indicator_set(enum indicator_state state)
     }
 #endif
 }
+
+UF2_STATUS_LISTENER_DEFINE(pwm_led_status, on_status);

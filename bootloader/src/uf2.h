@@ -14,7 +14,7 @@
 #include "board_flash.h"
 
 #ifndef CFG_UF2_FLASH_SIZE
-#define CFG_UF2_FLASH_SIZE          CONFIG_UF2_FLASH_SIZE
+#define CFG_UF2_FLASH_SIZE          PARTITION_SIZE(slot0_partition)
 #endif
 
 #ifndef CFG_UF2_NUM_BLOCKS
@@ -36,12 +36,6 @@
 
 #define MAX_BLOCKS (CFG_UF2_FLASH_SIZE / 256 + 100)
 
-typedef struct {
-    uint32_t numBlocks;
-    uint32_t numWritten;
-    bool aborted;
-    uint8_t writtenMask[MAX_BLOCKS / 8 + 1];
-} WriteState;
 
 typedef struct {
     uint32_t magicStart0;
@@ -58,6 +52,6 @@ typedef struct {
 
 void uf2_init(void);
 void uf2_read_block(uint32_t block_no, uint8_t *data);
-int  uf2_write_block(uint32_t block_no, uint8_t *data, WriteState *state);
+
 
 #endif

@@ -1,0 +1,12 @@
+/*
+ * SPDX-License-Identifier: MIT
+ *
+ * The board links applications into slot0; the bootloader itself lives
+ * in boot_partition.
+ */
+
+/ {
+	chosen {
+		zephyr,code-partition = &boot_partition;
+	};
+};

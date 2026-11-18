@@ -1,44 +1,59 @@
 /*
  * SPDX-License-Identifier: MIT
  *
- * Bootloader gets 96 KiB at 0x0, the application slot starts at 0x18000.
- * storage_partition is preserved at the tail so the application can
- * still use settings storage.
+ * Same layout as Lily Ultra so DK-built apps match:
+ *
+ *   0x000000  128 KiB   UF2 bootloader
+ *   0x020000  1808 KiB  application
+ *   0x1e4000  100 KiB   settings storage
  */
 
+/delete-node/ &boot_partition;
+/delete-node/ &slot0_partition;
+/delete-node/ &slot1_partition;
+/delete-node/ &storage_partition;
+
 &cpuapp_rram {
-    partitions {
-        /delete-node/ partition@0;
-        /delete-node/ partition@10000;
-        /delete-node/ partition@102000;
-        /delete-node/ partition@1f4000;
+	partitions {
+		boot_partition: partition@0 {
+			compatible = "zephyr,mapped-partition";
+			label = "uf2-bootloader";
+			reg = <0x000000 DT_SIZE_K(128)>;
+			read-only;
+		};
 
-        compatible = "fixed-partitions";
+		slot0_partition: partition@20000 {
+			compatible = "zephyr,mapped-partition";
+			label = "image-0";
+			reg = <0x020000 DT_SIZE_K(1808)>;
+		};
 
-        boot_partition: partition@0 {
-            label = "bootloader";
-            reg = <0x0 DT_SIZE_K(96)>;
-        };
+		storage_partition: partition@1e4000 {
+			compatible = "zephyr,mapped-partition";
+			label = "storage";
+			reg = <0x1e4000 DT_SIZE_K(100)>;
+		};
+	};
+};
 
-        slot0_partition: partition@18000 {
-            label = "image-0";
-            reg = <0x18000 DT_SIZE_K(1840)>;
-        };
+&gpregret1 {
+	status = "okay";
 
-        storage_partition: partition@1e4000 {
-            label = "storage";
-            reg = <0x1e4000 DT_SIZE_K(100)>;
-        };
-    };
+	boot_mode0: boot_mode@0 {
+		compatible = "zephyr,retention";
+		status = "okay";
+		reg = <0x0 0x1>;
+	};
 };
 
 / {
-    chosen {
-        zephyr,code-partition = &boot_partition;
-    };
+	chosen {
+		zephyr,code-partition = &boot_partition;
+		zephyr,boot-mode = &boot_mode0;
+	};
 
-    /* Hold this button during reset to force DFU mode. */
-    aliases {
-        dfu-button = &button0;
-    };
+	/* Hold this button during reset to force DFU mode. */
+	aliases {
+		dfu-button = &button0;
+	};
 };
